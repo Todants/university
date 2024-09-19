@@ -1,13 +1,30 @@
-from sqlalchemy import create_engine, Column, String, Integer, DateTime, LargeBinary
-from sqlalchemy.orm import declarative_base, relationship
+import asyncio
+
+from sqlalchemy import Column, String, Integer, DateTime, LargeBinary
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from sqlalchemy import ForeignKey
 
 Base = declarative_base()
 
-DATABASE_URL = "postgresql+psycopg2://postgres:123@localhost:5432/univ"
-engine = create_engine(DATABASE_URL)
+DATABASE_URL = "postgresql+asyncpg://admin:123@localhost:5432/univ"
+engine = create_async_engine(DATABASE_URL)
 
-Base.metadata.create_all(engine)
+# async def init_models():
+#     async with engine.begin() as conn:
+#         await conn.run_sync(Base.metadata.drop_all)
+#         await conn.run_sync(Base.metadata.create_all)
+#
+# asyncio.run(init_models())
+
+SessionLocal = sessionmaker(
+    engine, expire_on_commit=False, class_=AsyncSession
+)
+
+
+async def get_db():
+    async with SessionLocal() as session:
+        yield session
 
 
 class Group(Base):
@@ -19,7 +36,7 @@ class Group(Base):
 
 class Student(Base):
     __tablename__ = 'student'
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id_student = Column(Integer, primary_key=True, autoincrement=True)
     first_name = Column(String)
     last_name = Column(String)
     birth_date = Column(DateTime)
@@ -33,7 +50,7 @@ class Student(Base):
 
 class Instructor(Base):
     __tablename__ = 'instructor'
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id_instructor = Column(Integer, primary_key=True, autoincrement=True)
     first_name = Column(String)
     last_name = Column(String)
     birth_date = Column(DateTime)
@@ -53,8 +70,16 @@ class Department(Base):
 
 class Subject(Base):
     __tablename__ = 'subject'
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id_subject = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String)
 
-    student_id = Column(Integer, ForeignKey('student.id'))
+    student_id = Column(Integer, ForeignKey('student.id_student'))
     student = relationship("Student", back_populates="subjects")
+
+class Professor(Base):
+    __tablename__ = 'professors'
+    id_professor = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, index=True)
+    department_name = Column(String, ForeignKey('department.name'))
+    department = relationship("Department", back_populates="professors")
+    groups = relationship("Group", back_populates="professor", cascade="all, delete")
