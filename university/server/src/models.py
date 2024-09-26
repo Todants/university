@@ -8,7 +8,12 @@ from sqlalchemy import ForeignKey
 Base = declarative_base()
 
 DATABASE_URL = "postgresql+asyncpg://admin:123@localhost:5432/univ"
-engine = create_async_engine(DATABASE_URL)
+
+engine = create_async_engine(
+    DATABASE_URL,
+    echo=True,
+    future=True,
+)
 
 # async def init_models():
 #     async with engine.begin() as conn:
@@ -28,21 +33,25 @@ async def get_db():
 
 
 class Group(Base):
-    __tablename__ = 'group'
-    name = Column(String, primary_key=True)
+    __tablename__ = 'groups'
+    id_group = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, nullable=False)
+    professor_id = Column(Integer, ForeignKey('professors.id_professor'))
 
+    professor = relationship("Professor", back_populates="groups")
     students = relationship("Student", back_populates="group")
 
 
 class Student(Base):
-    __tablename__ = 'student'
+    __tablename__ = 'students'
     id_student = Column(Integer, primary_key=True, autoincrement=True)
     first_name = Column(String)
     last_name = Column(String)
     birth_date = Column(DateTime)
     enroll_date = Column(DateTime)
     photo = Column(LargeBinary)
-    group_name = Column(String, ForeignKey('group.name'))
+    group_id = Column(Integer, ForeignKey('groups.id_group'))
+
 
     group = relationship("Group", back_populates="students")
     subjects = relationship("Subject", back_populates="student")
@@ -66,6 +75,7 @@ class Department(Base):
     name = Column(String, primary_key=True)
 
     instructors = relationship("Instructor", back_populates="department")
+    professors = relationship("Professor", back_populates="department")
 
 
 class Subject(Base):
@@ -73,7 +83,7 @@ class Subject(Base):
     id_subject = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String)
 
-    student_id = Column(Integer, ForeignKey('student.id_student'))
+    student_id = Column(Integer, ForeignKey('students.id_student'))
     student = relationship("Student", back_populates="subjects")
 
 class Professor(Base):

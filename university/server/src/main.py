@@ -79,7 +79,7 @@ async def create_professor(professor, db: AsyncSession = Depends(get_db)):
     db.add(new_professor)
     await db.commit()
 
-    await rebalance_groups(db, professor.department_name)
+    # await rebalance_groups(db, professor.department_name)
 
     return new_professor
 
@@ -112,7 +112,7 @@ async def update_professor(professor_id: int, professor_update, db: AsyncSession
     professor.department_name = professor_update.department_name or professor.department_name
     await db.commit()
 
-    await rebalance_groups(db, professor.department_name)
+    # await rebalance_groups(db, professor.department_name)
     return professor
 
 
@@ -129,7 +129,7 @@ async def delete_professor(professor_id: int, db: AsyncSession = Depends(get_db)
     await db.delete(professor)
     await db.commit()
 
-    await rebalance_groups(db, professor.department_name)
+    # await rebalance_groups(db, professor.department_name)
     return {"message": "Professor deleted successfully"}
 
 # Add a new student
@@ -149,7 +149,7 @@ async def create_student(student, db: AsyncSession = Depends(get_db)):
     await db.commit()
 
     # Rebalance groups
-    await rebalance_groups(db, student.department_name)
+    # await rebalance_groups(db, student.department_name)
 
     return new_student
 
@@ -182,7 +182,7 @@ async def update_student(student_id: int, student_update, db: AsyncSession = Dep
     student.department_name = student_update.department_name or student.department_name
     await db.commit()
 
-    await rebalance_groups(db, student.department_name)
+    # await rebalance_groups(db, student.department_name)
     return student
 
 
@@ -196,7 +196,7 @@ async def delete_student(student_id: int, db: AsyncSession = Depends(get_db)):
     await db.delete(student)
     await db.commit()
 
-    await rebalance_groups(db, student.department_name)
+    # await rebalance_groups(db, student.department_name)
     return {"message": "Student deleted successfully"}
 
 async def rebalance_groups(db: AsyncSession, department_name: str):
