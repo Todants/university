@@ -2,11 +2,12 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.future import select
-from src.models import Student, Professor, Department, Group, get_db
+from src.db import Student, Professor, Department, Group, get_db
+from src.models import DepartmentModel, ProfessorModel, StudentModel
 
 Base = declarative_base()
 
-DATABASE_URL = "postgresql+asyncpg://admin:123@localhost:5432/univ"
+DATABASE_URL = "postgresql+asyncpg://postres:123@localhost:5432/univ"
 engine = create_async_engine(DATABASE_URL)
 
 
@@ -21,7 +22,7 @@ SessionLocal = sessionmaker(
 app = FastAPI()
 
 @app.post("/departments/")
-async def create_department(department, db: AsyncSession = Depends(get_db)):
+async def create_department(department: DepartmentModel, db: AsyncSession = Depends(get_db)):
     new_department = Department(
         name=department.name
     )
@@ -29,7 +30,7 @@ async def create_department(department, db: AsyncSession = Depends(get_db)):
     await db.commit()
     return new_department
 
-# Get a department by name
+
 @app.get("/departments/{department_name}")
 async def get_department(department_name: str, db: AsyncSession = Depends(get_db)):
     department = await db.get(Department, department_name)
@@ -37,14 +38,14 @@ async def get_department(department_name: str, db: AsyncSession = Depends(get_db
         raise HTTPException(status_code=404, detail="Department not found")
     return department
 
-# Get all departments
+
 @app.get("/departments/")
 async def get_all_departments(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Department))
     departments = result.scalars().all()
     return departments
 
-# Update department name
+
 @app.put("/departments/{department_name}")
 async def update_department(department_name: str, new_name: str, db: AsyncSession = Depends(get_db)):
     department = await db.get(Department, department_name)
@@ -54,7 +55,7 @@ async def update_department(department_name: str, new_name: str, db: AsyncSessio
     await db.commit()
     return department
 
-# Delete a department
+
 @app.delete("/departments/{department_name}")
 async def delete_department(department_name: str, db: AsyncSession = Depends(get_db)):
     department = await db.get(Department, department_name)
@@ -64,9 +65,9 @@ async def delete_department(department_name: str, db: AsyncSession = Depends(get
     await db.commit()
     return {"message": "Department deleted successfully"}
 
-# Add a new professor
+
 @app.post("/professors/")
-async def create_professor(professor, db: AsyncSession = Depends(get_db)):
+async def create_professor(professor: ProfessorModel, db: AsyncSession = Depends(get_db)):
 
     department = await db.get(Department, professor.department_name)
     if not department:
@@ -84,7 +85,6 @@ async def create_professor(professor, db: AsyncSession = Depends(get_db)):
     return new_professor
 
 
-# Get a professor by ID
 @app.get("/professors/{professor_id}")
 async def get_professor(professor_id: int, db: AsyncSession = Depends(get_db)):
     professor = await db.get(Professor, professor_id)
@@ -93,7 +93,6 @@ async def get_professor(professor_id: int, db: AsyncSession = Depends(get_db)):
     return professor
 
 
-# Get all professors in a department
 @app.get("/professors/")
 async def get_all_professors(department_name: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Professor).where(Professor.department_name == department_name))
@@ -101,7 +100,6 @@ async def get_all_professors(department_name: str, db: AsyncSession = Depends(ge
     return professors
 
 
-# Update professor's department or name
 @app.put("/professors/{professor_id}")
 async def update_professor(professor_id: int, professor_update, db: AsyncSession = Depends(get_db)):
     professor = await db.get(Professor, professor_id)
@@ -116,7 +114,6 @@ async def update_professor(professor_id: int, professor_update, db: AsyncSession
     return professor
 
 
-# Delete a professor (with group reassignment)
 @app.delete("/professors/{professor_id}")
 async def delete_professor(professor_id: int, db: AsyncSession = Depends(get_db)):
     professor = await db.get(Professor, professor_id)
@@ -132,9 +129,9 @@ async def delete_professor(professor_id: int, db: AsyncSession = Depends(get_db)
     # await rebalance_groups(db, professor.department_name)
     return {"message": "Professor deleted successfully"}
 
-# Add a new student
+
 @app.post("/students/")
-async def create_student(student, db: AsyncSession = Depends(get_db)):
+async def create_student(student: StudentModel, db: AsyncSession = Depends(get_db)):
     # Ensure department exists and has professors
     department = await db.get(Department, student.department_name)
     if not department:
@@ -144,7 +141,14 @@ async def create_student(student, db: AsyncSession = Depends(get_db)):
     if not professors:
         raise HTTPException(status_code=400, detail="No professors available in this department")
 
-    new_student = Student(name=student.name, department_name=student.department_name)
+    new_student = Student(
+        first_name=student.first_name,
+        last_name = student.last_name,
+        birth_date = student.birth_date,
+        enroll_date = student.enroll_date,
+        photo = student.photo,
+        group_id=None
+    )
     db.add(new_student)
     await db.commit()
 
@@ -154,7 +158,6 @@ async def create_student(student, db: AsyncSession = Depends(get_db)):
     return new_student
 
 
-# Get a student by ID
 @app.get("/students/{student_id}")
 async def get_student(student_id: int, db: AsyncSession = Depends(get_db)):
     student = await db.get(Student, student_id)
@@ -163,7 +166,6 @@ async def get_student(student_id: int, db: AsyncSession = Depends(get_db)):
     return student
 
 
-# Get all students in a department
 @app.get("/students/")
 async def get_all_students(department_name: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Student).where(Student.department_name == department_name))
@@ -171,7 +173,6 @@ async def get_all_students(department_name: str, db: AsyncSession = Depends(get_
     return students
 
 
-# Update student (transfer to another department)
 @app.put("/students/{student_id}")
 async def update_student(student_id: int, student_update, db: AsyncSession = Depends(get_db)):
     student = await db.get(Student, student_id)
@@ -186,7 +187,6 @@ async def update_student(student_id: int, student_update, db: AsyncSession = Dep
     return student
 
 
-# Delete a student
 @app.delete("/students/{student_id}")
 async def delete_student(student_id: int, db: AsyncSession = Depends(get_db)):
     student = await db.get(Student, student_id)
@@ -199,19 +199,20 @@ async def delete_student(student_id: int, db: AsyncSession = Depends(get_db)):
     # await rebalance_groups(db, student.department_name)
     return {"message": "Student deleted successfully"}
 
+
 async def rebalance_groups(db: AsyncSession, department_name: str):
     # Get all professors and students in the department
     professors = (await db.execute(select(Professor).where(Professor.department_name == department_name))).scalars().all()
     students = (await db.execute(select(Student).where(Student.department_name == department_name))).scalars().all()
 
     # Call the balancing function
-    # groups = balance_students_and_groups(professors, students)
+    groups = balance_students_and_groups(professors, students)
 
     # Apply the new group assignments
-    # for group_data in groups:
-    #     group = Group(professor_id=group_data['professor_id'])
-    #     db.add(group)
-    #     for student in group_data['students']:
-    #         student.group_id = group.id
+    for group_data in groups:
+         group = Group(professor_id=group_data['professor_id'])
+         db.add(group)
+         for student in group_data['students']:
+             student.group_id = group.id
 
     await db.commit()
