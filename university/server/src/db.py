@@ -1,6 +1,6 @@
 import asyncio
 
-from sqlalchemy import Column, String, Integer, DateTime, LargeBinary
+from sqlalchemy import Column, String, Integer, DateTime, LargeBinary, Table
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from sqlalchemy import ForeignKey
@@ -32,6 +32,14 @@ async def get_db():
         yield session
 
 
+association_table = Table(
+    "association_table",
+    Base.metadata,
+    Column("left_id", ForeignKey("students.id_student")),
+    Column("right_id", ForeignKey("subject.id_subject")),
+)
+
+
 class Group(Base):
     __tablename__ = 'groups'
     id_group = Column(Integer, primary_key=True, autoincrement=True)
@@ -40,7 +48,8 @@ class Group(Base):
     professor_id = Column(Integer, ForeignKey('professors.id_professor'))
     instructor_id = Column(Integer, ForeignKey('instructor.id_instructor'))
 
-    # professor = relationship("Professor", back_populates="groups")
+    professor = relationship("Professor", back_populates="groups")
+    instructor = relationship("Instructor", back_populates="groups")
     students = relationship("Student", back_populates="group")
 
 
@@ -54,7 +63,8 @@ class Student(Base):
     photo = Column(LargeBinary)
 
     group_id = Column(Integer, ForeignKey('groups.id_group'))
-    subjects = relationship("Subject", back_populates="student")
+    group = relationship("Group", back_populates="students")
+    subjects = relationship("Subject", secondary=association_table, back_populates="student")
 
 
 class Instructor(Base):
@@ -67,14 +77,15 @@ class Instructor(Base):
     photo = Column(LargeBinary)
 
     department_name = Column(String, ForeignKey('department.name'))
-    groups = relationship("Group", back_populates="instructors")
+    department = relationship("Department", back_populates="instructors")
+    groups = relationship("Group", back_populates="instructor")
 
 
 class Department(Base):
     __tablename__ = 'department'
     name = Column(String, primary_key=True)
 
-    subjects = relationship("Instructor", back_populates="department")
+    subjects = relationship("Subject", back_populates="department")
     instructors = relationship("Instructor", back_populates="department")
     professors = relationship("Professor", back_populates="department")
 
@@ -85,7 +96,9 @@ class Subject(Base):
     name = Column(String)
 
     department_name = Column(String, ForeignKey('department.name'))
-    student = relationship("Student", back_populates="subjects")
+    department = relationship("Department", back_populates="subjects")
+    student = relationship("Student", secondary=association_table, back_populates="subjects")
+
 
 class Professor(Base):
     __tablename__ = 'professors'
@@ -93,4 +106,5 @@ class Professor(Base):
     name = Column(String, index=True)
 
     department_name = Column(String, ForeignKey('department.name'))
+    department = relationship("Department", back_populates="professors")
     groups = relationship("Group", back_populates="professor")

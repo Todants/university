@@ -1,3 +1,4 @@
+from pydantic_core.core_schema import none_schema
 from sqlalchemy.orm import sessionmaker, declarative_base
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -132,7 +133,7 @@ async def delete_professor(professor_id: int, db: AsyncSession = Depends(get_db)
 
 @app.post("/students/")
 async def create_student(student: StudentModel, db: AsyncSession = Depends(get_db)):
-    # Ensure department exists and has professors
+
     department = await db.get(Department, student.department_name)
     if not department:
         raise HTTPException(status_code=404, detail="Department not found")
@@ -146,7 +147,7 @@ async def create_student(student: StudentModel, db: AsyncSession = Depends(get_d
         last_name = student.last_name,
         birth_date = student.birth_date,
         enroll_date = student.enroll_date,
-        photo = student.photo,
+        photo = None,
         group_id=None
     )
     db.add(new_student)
@@ -168,7 +169,8 @@ async def get_student(student_id: int, db: AsyncSession = Depends(get_db)):
 
 @app.get("/students/")
 async def get_all_students(department_name: str, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Student).where(Student.department_name == department_name))
+
+    result = await db.execute(select(Student).join(Group, Group.id_group == Student.group_id).join(Professor, Professor.id_professor == Group.professor_id).join(Department, Department.name == Professor.department_name).where(Department.name == department_name))
     students = result.scalars().all()
     return students
 
@@ -206,7 +208,7 @@ async def rebalance_groups(db: AsyncSession, department_name: str):
     students = (await db.execute(select(Student).where(Student.department_name == department_name))).scalars().all()
 
     # Call the balancing function
-    groups = balance_students_and_groups(professors, students)
+    # groups = balance_students_and_groups(professors, students)
 
     # Apply the new group assignments
     for group_data in groups:
