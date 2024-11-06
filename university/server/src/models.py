@@ -1,39 +1,60 @@
-from datetime import datetime
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean
+from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.sql import func
 
-from fastapi import UploadFile
-from pydantic import BaseModel
-
-
-class Group(BaseModel):
-    name : str
+Base = declarative_base()
 
 
-class StudentModel(BaseModel):
-    first_name : str
-    last_name : str
-    birth_date : datetime
-    enroll_date : datetime
-    # photo : UploadFile
-    department_name : str
+class Department(Base):
+    __tablename__ = 'departments'
+    id = Column(Integer, primary_key=True)
+    name = Column(String, unique=True)
+
+    instructors = relationship('Instructor', back_populates='department')
+    subjects = relationship('Subject', back_populates='department')
 
 
-class InstructorModel(BaseModel):
-    first_name : str
-    last_name : str
-    birth_date : datetime
-    employ_date : datetime
-    photo : UploadFile
+class Subject(Base):
+    __tablename__ = 'subjects'
+    id = Column(Integer, primary_key=True)
+    name = Column(String, unique=True)
+    department_id = Column(Integer, ForeignKey('departments.id'))
+
+    department = relationship('Department', back_populates='subjects')
 
 
-class DepartmentModel(BaseModel):
-    name : str
+class Instructor(Base):
+    __tablename__ = 'instructors'
+    id = Column(Integer, primary_key=True)
+    first_name = Column(String)
+    last_name = Column(String)
+    birth_date = Column(DateTime)
+    employ_date = Column(DateTime, default=func.now())
+    department_id = Column(Integer, ForeignKey('departments.id'))
+
+    department = relationship('Department', back_populates='instructors')
+    groups = relationship('Group', back_populates='instructor')
 
 
-class SubjectModel(BaseModel):
-    name : str
+class Student(Base):
+    __tablename__ = 'students'
+    id = Column(Integer, primary_key=True)
+    first_name = Column(String)
+    last_name = Column(String)
+    birth_date = Column(DateTime)
+    enroll_date = Column(DateTime, default=func.now())
+    group_id = Column(Integer, ForeignKey('groups.id'))
+    department_id = Column(Integer, ForeignKey('departments.id'))
+
+    group = relationship('Group', back_populates='students')
 
 
-class ProfessorModel(BaseModel):
-    name : str
-    department_name: str
+class Group(Base):
+    __tablename__ = 'groups'
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    instructor_id = Column(Integer, ForeignKey('instructors.id'))
 
+    instructor = relationship('Instructor', back_populates='groups')
+    students = relationship('Student', back_populates='group')
