@@ -44,7 +44,7 @@ class Student(Base):
     last_name = Column(String)
     birth_date = Column(DateTime)
     enroll_date = Column(DateTime, default=func.now())
-    group_id = Column(Integer, ForeignKey('groups.id'))
+    group_id = Column(Integer, ForeignKey('groups.id'), default=None)
     department_id = Column(Integer, ForeignKey('departments.id'))
 
     group = relationship('Group', back_populates='students')
